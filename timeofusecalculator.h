@@ -12,10 +12,11 @@ public:
     virtual double GetTotal(const UsageData& data) const override;
     virtual QWidget* CreateWidgets() override;
     virtual QString GetTitle() const override;
+    virtual QString GetDescription() const override;
 
 private:
     double mPeakCost = 0.0f;
-    double mSholderCost = 0.0f;
+    double mShoulderCost = 0.0f;
     double mOffPeakCost = 0.0f;
 };
 

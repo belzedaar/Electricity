@@ -39,3 +39,8 @@ QString FlatRateFeedInCalculator::GetTitle() const
 {
     return "Flat Rate Feed In";
 }
+
+QString FlatRateFeedInCalculator::GetDescription() const
+{
+    return QString("$%1 per kwh").arg(mFlatRateDollars);
+}

@@ -16,6 +16,7 @@ public:
     virtual double GetTotal(const UsageData& data) const = 0;
     virtual QWidget* CreateWidgets() = 0;
     virtual QString GetTitle() const = 0;
+    virtual QString GetDescription() const = 0;
 signals:
     void CaculationsChanged();
 };

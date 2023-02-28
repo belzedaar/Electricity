@@ -13,7 +13,7 @@ double TimeOfUseCalculator::GetTotal(const UsageData& data) const
 {
     double cost = 0.0f;
     cost += mPeakCost * data.GetTotal().mPeak;
-    cost += mSholderCost * data.GetTotal().mShoulder;
+    cost += mShoulderCost * data.GetTotal().mShoulder;
     cost += mOffPeakCost * data.GetTotal().mOffPeak;
 
     return cost;
@@ -40,7 +40,7 @@ QWidget* TimeOfUseCalculator::CreateWidgets()
         layout->addRow("Shoulder:", shoulder);
         connect(shoulder, &QLineEdit::editingFinished, this, [this, shoulder]()
         {
-            mSholderCost =  shoulder->text().toDouble();
+            mShoulderCost =  shoulder->text().toDouble();
             emit CaculationsChanged();
         });
     }
@@ -60,4 +60,9 @@ QWidget* TimeOfUseCalculator::CreateWidgets()
 QString TimeOfUseCalculator::GetTitle() const
 {
     return "Time of Use";
+}
+
+QString TimeOfUseCalculator::GetDescription() const
+{
+  return QString("Peak $%1 Shoulder $%2 Off Peak $%3 ").arg(mPeakCost).arg(mShoulderCost).arg(mOffPeakCost);
 }

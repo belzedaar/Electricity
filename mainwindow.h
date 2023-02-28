@@ -22,6 +22,7 @@ private slots:
     void OpenFile();
     void Reload();
     void Calculate();
+    void RecordResult();
 
 private:
     void LoadData(const QString& path);
@@ -39,9 +40,15 @@ private:
     QStandardItemModel mPeakTimes;
     QStandardItemModel mShoulderTimes;
 
+    QStandardItemModel mResults;
+
     QString mFileName;
 
     QList<ITypeCalculator*> mCostCalculators;
     QList<ITypeCalculator*> mFeedInCalculators;
+
+    QString mCostString;
+    QString mFeedInString;
+    QString mGrandTotalString;
 };
 

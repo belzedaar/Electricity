@@ -42,3 +42,8 @@ QString FlatRateUsageCalculator::GetTitle() const
 {
     return "Fixed Rate";
 }
+
+QString FlatRateUsageCalculator::GetDescription() const
+{
+    return QString("$%1 per kwh").arg(mFixedRateDollars);
+}

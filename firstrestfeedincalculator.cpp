@@ -120,3 +120,8 @@ QString FirstRestFeedInCalculator::GetTitle() const
 {
     return "First/Rest Feed In";
 }
+
+QString FirstRestFeedInCalculator::GetDescription() const
+{
+    return QString("First %1 kwh = $%2, Rest $%3 ").arg(mFirstKWH).arg(mFirstRateDollars).arg(mRestRateDollars);
+}

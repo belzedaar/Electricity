@@ -23,6 +23,13 @@ MainWindow::MainWindow(QWidget *parent)
 
     mUI->graphicsView->setChart(&mChart);
 
+
+    connect(mUI->btnRecordResult, &QPushButton::clicked, this, &MainWindow::RecordResult);
+
+    mResults.setHorizontalHeaderLabels(QStringList() << "Name" << "Rate" << "Feed In" << "Total Cost");
+
+    mUI->tblResults->setModel(&mResults);
+
     connect(mUI->action_Open, &QAction::triggered, this, &MainWindow::OpenFile);
 
     QList<QPair<QString, QString>> peaks;
@@ -96,6 +103,7 @@ void MainWindow::Calculate()
         if (c->GetTitle() == mUI->tabGridCost->tabText(mUI->tabGridCost->currentIndex()))
         {
             cost += c->GetTotal(*mUsageData);
+            mCostString = c->GetDescription();
         }
     }
 
@@ -109,12 +117,24 @@ void MainWindow::Calculate()
         {
             // this is expected to be negative
             credits += c->GetTotal(*mUsageData);
+            mFeedInString = c->GetDescription();
         }
     }
 
     mUI->txtTotalCost->setText(QString("%1").arg(cost));
     mUI->txtTotalCredits->setText(QString("%1").arg(credits));
-    mUI->txtGrandTotal->setText(QString("%1").arg(cost + credits));
+    mGrandTotalString = QString("%1").arg(cost + credits);
+    mUI->txtGrandTotal->setText(mGrandTotalString);
+}
+
+void MainWindow::RecordResult()
+{
+    QList<QStandardItem*> items;
+    items << new QStandardItem(mUI->txtPlanName->text());
+    items << new QStandardItem(mCostString);
+    items << new QStandardItem(mFeedInString);
+    items << new QStandardItem(mGrandTotalString);
+    mResults.appendRow(items);
 }
 
 void MainWindow::LoadData(const QString& path)
@@ -213,8 +233,7 @@ void MainWindow::LoadData(const QString& path)
 
 void MainWindow::SetupDataModel(QStandardItemModel &model, QList<QPair<QString, QString> > &times)
 {
-    model.setHeaderData(0, Qt::Horizontal, "Start");
-    model.setHeaderData(1, Qt::Horizontal, "End");
+    model.setHorizontalHeaderLabels(QStringList() << "Start" << "End");
 
     for (const QPair<QString, QString>& startAndEnd : times)
     {

@@ -12,6 +12,7 @@ public:
     virtual double GetTotal(const UsageData& data) const override;
     virtual QWidget* CreateWidgets() override;
     virtual QString GetTitle() const override;
+    virtual QString GetDescription() const override;
 
 private:
     double mFlatRateDollars = 0.0f;
