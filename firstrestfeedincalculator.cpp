@@ -12,23 +12,54 @@ FirstRestFeedInCalculator::~FirstRestFeedInCalculator() = default;
 
 double FirstRestFeedInCalculator::GetTotal(const UsageData& data) const
 {
-    double feedIn = 0.0f;
-    for (uint32_t i = 0; i < 365; ++i)
+    double feedInCredit = 0.0f;
+    if (mAverageOverQuarters)
     {
-        const UsageData::Stats& dayStats = data.Getday(i);
-        if (dayStats.mFeedIn > mFirstKWH)
+        double feedInPerQuater[4] = { 0 };
+
+        for (uint32_t m = 0; m < 11; ++m)
         {
-            feedIn += mFirstKWH * mFirstRateDollars;
-            feedIn += (dayStats.mFeedIn - mFirstKWH) * mRestRateDollars;
+            const UsageData::Stats& monthStats = data.GetMonth(m);
+            const uint32_t quaterIndex = m / 3; // 3 months per quater
+            feedInPerQuater[quaterIndex] += monthStats.mFeedIn;
         }
-        else
+
+        for (double feedOneQuater : feedInPerQuater)
         {
-            feedIn += dayStats.mFeedIn * mFirstRateDollars;
+            double averagePerDay = feedOneQuater / 91.25;
+
+            double creditPerDay = 0.0f;
+            if (averagePerDay> mFirstKWH)
+            {
+                creditPerDay += mFirstKWH * mFirstRateDollars;
+                creditPerDay += (averagePerDay - mFirstKWH) * mRestRateDollars;
+            }
+            else
+            {
+                creditPerDay += averagePerDay * mFirstRateDollars;
+            }
+
+            feedInCredit += creditPerDay * 91.25;
         }
     }
-
+    else
+    {
+        for (uint32_t i = 0; i < 365; ++i)
+        {
+            const UsageData::Stats& dayStats = data.Getday(i);
+            if (dayStats.mFeedIn > mFirstKWH)
+            {
+                feedInCredit += mFirstKWH * mFirstRateDollars;
+                feedInCredit += (dayStats.mFeedIn - mFirstKWH) * mRestRateDollars;
+            }
+            else
+            {
+                feedInCredit += dayStats.mFeedIn * mFirstRateDollars;
+            }
+        }
+    }
     // we return calculaed feed in values as negative
-    return -feedIn;
+    return -feedInCredit;
 }
 
 QWidget* FirstRestFeedInCalculator::CreateWidgets()
