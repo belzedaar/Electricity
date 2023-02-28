@@ -2,6 +2,10 @@
 #include "ui_mainwindow.h"
 
 #include "usagedata.h"
+#include "flatrateusagecalculator.h"
+#include "timeofusecalculator.h"
+#include "flatratefeedincalculator.h"
+#include "firstrestfeedincalculator.h"
 
 #include <QFileDialog>
 #include <QBarSeries>
@@ -9,6 +13,7 @@
 #include <QBarCategoryAxis>
 #include <QStackedBarSeries>
 #include <QValueAxis>
+#include <QStandardItem>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -16,18 +21,47 @@ MainWindow::MainWindow(QWidget *parent)
 {
     mUI->setupUi(this);
 
-    connect(mUI->action_Open, &QAction::triggered, this, &MainWindow::OpenFile);
-
-    LoadData("C:/Users/user/Documents/build-Electricity-Desktop_Qt_6_4_2_MinGW_64_bit-Debug/2273487111_01Feb2022_02Feb2023_27Feb2023_ACTEWAGL_SUMMARY.csv");
-
     mUI->graphicsView->setChart(&mChart);
 
+    connect(mUI->action_Open, &QAction::triggered, this, &MainWindow::OpenFile);
 
+    QList<QPair<QString, QString>> peaks;
+    peaks << qMakePair("07:00", "09:00");
+    peaks << qMakePair("17:00", "20:00");
+    SetupDataModel(mPeakTimes, peaks);
+
+    QList<QPair<QString, QString>> shoulder;
+    shoulder << qMakePair("09:00", "17:00");
+    shoulder << qMakePair("20:00", "22:00");
+    SetupDataModel(mShoulderTimes, shoulder);
+
+    mUI->tblPeak->setModel(&mPeakTimes);
+    mUI->tblShoulder->setModel(&mShoulderTimes);
+
+    connect(&mPeakTimes, &QStandardItemModel::dataChanged, this, &MainWindow::Reload);
+    connect(&mShoulderTimes, &QStandardItemModel::dataChanged, this, &MainWindow::Reload);
+
+    mCostCalculators << new FlatRateUsageCalculator();
+    mCostCalculators << new TimeOfUseCalculator();
+
+    SetupCalculators(mUI->tabGridCost, mCostCalculators);
+
+    mFeedInCalculators << new FlatRateFeedInCalculator();
+    mFeedInCalculators << new FirstRestFeedInCalculator();
+    SetupCalculators(mUI->tabFeedIn, mFeedInCalculators);
+
+    connect(mUI->tabGridCost, &QTabWidget::currentChanged, this, &MainWindow::Calculate);
+    connect(mUI->tabFeedIn, &QTabWidget::currentChanged, this, &MainWindow::Calculate);
+
+    connect(mUI->txtAccessFee, &QLineEdit::editingFinished, this, &MainWindow::Calculate);
+    connect(mUI->txtBonus, &QLineEdit::editingFinished, this, &MainWindow::Calculate);
+
+    LoadData("C:/Users/user/Documents/build-Electricity-Desktop_Qt_6_4_2_MinGW_64_bit-Debug/2273487111_01Feb2022_02Feb2023_27Feb2023_ACTEWAGL_SUMMARY.csv");
 }
 
 MainWindow::~MainWindow()
 {
-    delete mUI;
+    delete mUI;    
 }
 
 void MainWindow::OpenFile()
@@ -42,14 +76,65 @@ void MainWindow::OpenFile()
 
 }
 
+void MainWindow::Reload()
+{
+    if (mFileName.isEmpty())
+    {
+        return;
+    }
+    LoadData(mFileName);
+}
+
+void MainWindow::Calculate()
+{
+    double cost = 0.0f;
+
+    cost += mUI->txtAccessFee->text().toDouble() * 365;
+
+    for (ITypeCalculator* c : mCostCalculators)
+    {
+        if (c->GetTitle() == mUI->tabGridCost->tabText(mUI->tabGridCost->currentIndex()))
+        {
+            cost += c->GetTotal(*mUsageData);
+        }
+    }
+
+    double credits = 0.0f;
+
+    credits -= mUI->txtBonus->text().toDouble();
+
+    for (ITypeCalculator* c : mFeedInCalculators)
+    {
+        if (c->GetTitle() == mUI->tabFeedIn->tabText(mUI->tabFeedIn->currentIndex()))
+        {
+            // this is expected to be negative
+            credits += c->GetTotal(*mUsageData);
+        }
+    }
+
+    mUI->txtTotalCost->setText(QString("%1").arg(cost));
+    mUI->txtTotalCredits->setText(QString("%1").arg(credits));
+    mUI->txtGrandTotal->setText(QString("%1").arg(cost + credits));
+}
+
 void MainWindow::LoadData(const QString& path)
 {
-    mUsageData.reset(new UsageData(path));
+    mFileName = path;
+
+    QList<QPair<QTime, QTime>> peakTimes;
+    QList<QPair<QTime, QTime>> shoulderTimes;
+
+    GetModelData(mPeakTimes, peakTimes);
+    GetModelData(mShoulderTimes, shoulderTimes);
+
+    mUsageData.reset(new UsageData(path, peakTimes, shoulderTimes));
 
     mChart.removeAllSeries();
-
-    QStackedBarSeries* usageSeries = new QStackedBarSeries();
-
+    for (QAbstractAxis* axis : mChart.axes())
+    {
+        mChart.removeAxis(axis);
+    }
+    QStackedBarSeries* usageSeries = new QStackedBarSeries();       
     mChart.addSeries(usageSeries);
 
     QBarSet* feedIn = new QBarSet("Feed In");
@@ -57,7 +142,15 @@ void MainWindow::LoadData(const QString& path)
     QBarSet* shoulder = new QBarSet("Shoulder");
     QBarSet* offPeak = new QBarSet("Off Peak");
 
-    feedIn->setColor(QColor(255, 245, 0)); // Bright Yellow
+    // colors match the website
+    feedIn->setColor(QColor(255, 198, 0));
+    shoulder->setColor(QColor(60, 130, 122));
+    peak->setColor(QColor(6, 77, 66));
+    offPeak->setColor(QColor(191, 215, 216));
+    feedIn->setPen(QPen(Qt::PenStyle::NoPen));
+    shoulder->setPen(QPen(Qt::PenStyle::NoPen));
+    peak->setPen(QPen(Qt::PenStyle::NoPen));
+    offPeak->setPen(QPen(Qt::PenStyle::NoPen));
 
     double maxUsage = 0.0f;
     double maxFeedIn = 0.0f;
@@ -78,6 +171,7 @@ void MainWindow::LoadData(const QString& path)
     usageSeries->append(shoulder);
     usageSeries->append(offPeak);
 
+
     for (QBarSet* barSet : usageSeries->barSets())
     {
         barSet->setSelectedColor(barSet->brush().color().darker());
@@ -96,8 +190,9 @@ void MainWindow::LoadData(const QString& path)
     usageSeries->attachAxis(axisX);
 
     QValueAxis *axisY = new QValueAxis();
-    axisY->setRange(-maxFeedIn, maxUsage);
-    axisY->applyNiceNumbers();
+    double range = qMax(maxFeedIn, maxUsage);
+    //axisY->setRange(-maxFeedIn, maxUsage);
+    axisY->setRange(-range, range);
 
     mChart.addAxis(axisY, Qt::AlignLeft);
     usageSeries->attachAxis(axisY);
@@ -105,17 +200,51 @@ void MainWindow::LoadData(const QString& path)
     mChart.legend()->setVisible(true);
     mChart.legend()->setAlignment(Qt::AlignBottom);
 
-    mUI->txtPeakUsage->setText(QString("%1").arg(mUsageData->GetTotal().mPeak));
-    mUI->txtShoulderUsage->setText(QString("%1").arg(mUsageData->GetTotal().mShoulder));
-    mUI->txtOffPeakUsage->setText(QString("%1").arg(mUsageData->GetTotal().mOffPeak));
-    mUI->txtSolarFeedIn->setText(QString("%1").arg(mUsageData->GetTotal().mFeedIn));
+    const UsageData::Stats& total = mUsageData->GetTotal();
 
-    /*
-    connect(usageSeries, &QAbstractBarSeries::clicked, this, [](int index, QBarSet *set)
+    mUI->txtPeakUsage->setText(QString("%1").arg(total.mPeak));
+    mUI->txtShoulderUsage->setText(QString("%1").arg(total.mShoulder));
+    mUI->txtOffPeakUsage->setText(QString("%1").arg(total.mOffPeak));
+    mUI->txtSolarFeedIn->setText(QString("%1").arg(total.mFeedIn));
+    mUI->txtTotal->setText(QString("%1").arg(total.mPeak + total.mShoulder + total.mOffPeak));
+
+    Calculate();
+}
+
+void MainWindow::SetupDataModel(QStandardItemModel &model, QList<QPair<QString, QString> > &times)
+{
+    model.setHeaderData(0, Qt::Horizontal, "Start");
+    model.setHeaderData(1, Qt::Horizontal, "End");
+
+    for (const QPair<QString, QString>& startAndEnd : times)
     {
-        //set->toggleSelection({index});
-        //set->sees
-    });
-    */
+        QList<QStandardItem*> items;
+        QStandardItem* start = new QStandardItem();
+        start->setData(QTime::fromString(startAndEnd.first, "HH:mm"), Qt::DisplayRole);
+        QStandardItem* end = new QStandardItem();
+        end->setData(QTime::fromString(startAndEnd.second, "HH:mm"), Qt::DisplayRole);
+        items << start;
+        items << end;
+        model.appendRow(items);
+    }
+}
+
+void MainWindow::GetModelData(const QStandardItemModel& model, QList<QPair<QTime, QTime>>& outTimes) const
+{
+    for (int32_t r = 0; r < model.rowCount(); ++r)
+    {
+        outTimes << qMakePair(model.data(model.index(r, 0)).toTime(),
+                              model.data(model.index(r, 1)).toTime());
+    }
+}
+
+void MainWindow::SetupCalculators(QTabWidget *tabWidget, QList<ITypeCalculator *> &calculators)
+{
+    for (ITypeCalculator* calculator : calculators)
+    {
+        QWidget* widget = calculator->CreateWidgets();
+        tabWidget->addTab(widget, calculator->GetTitle());
+        connect(calculator, &ITypeCalculator::CaculationsChanged, this, &MainWindow::Calculate);
+    }
 }
 

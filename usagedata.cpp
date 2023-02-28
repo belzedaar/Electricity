@@ -4,7 +4,11 @@
 #include <QTime>
 #include <QFile>
 
-UsageData::UsageData(const QString& path)
+UsageData::UsageData(const QString& path,
+                     const QList<QPair<QTime, QTime>>& peakTimes,
+                     const QList<QPair<QTime, QTime>>& shoulderTimes)
+    : mPeakTimes(peakTimes)
+    , mShoulderTimes(shoulderTimes)
 {
     QFile file(path);
     if (file.open(QFile::ReadOnly | QFile::Text) == false)
@@ -89,33 +93,20 @@ void UsageData::ParseLine(const QString& line)
 
 double* UsageData::GetSection(Stats& stats, const QTime& time) const
 {
-    static const QTime kMorningPeakStart = QTime::fromString("07:00", "HH:mm");
-    static const QTime kMorningPeakEnd = QTime::fromString("09:00", "HH:mm");
-    if ((time >= kMorningPeakStart) && (time < kMorningPeakEnd))
+    for (const QPair<QTime, QTime>& peak : mPeakTimes)
     {
-        return &stats.mPeak;
+        if ((time >= peak.first) && (time < peak.second))
+        {
+            return &stats.mPeak;
+        }
     }
 
-    static const QTime kEveningPeakStart = QTime::fromString("17:00", "HH:mm");
-    static const QTime kEveningPeakEnd = QTime::fromString("20:00", "HH:mm");
-    if ((time >= kEveningPeakStart) && (time < kEveningPeakEnd))
+    for (const QPair<QTime, QTime>& shoulder : mShoulderTimes)
     {
-        return &stats.mPeak;
-    }
-
-
-    static const QTime kDayShoulderStart = QTime::fromString("09:00", "HH:mm");
-    static const QTime kDayShoulderEnd = QTime::fromString("17:00", "HH:mm");
-    if ((time >= kDayShoulderStart) && (time < kDayShoulderEnd))
-    {
-        return &stats.mShoulder;
-    }
-
-    static const QTime kEveningShoulderStart = QTime::fromString("20:00", "HH:mm");
-    static const QTime kEveningShoulderEnd = QTime::fromString("22:00", "HH:mm");
-    if ((time >= kEveningShoulderStart) && (time < kEveningShoulderEnd))
-    {
-        return &stats.mShoulder;
+        if ((time >= shoulder.first) && (time < shoulder.second))
+        {
+            return &stats.mShoulder;
+        }
     }
 
     return &stats.mOffPeak;

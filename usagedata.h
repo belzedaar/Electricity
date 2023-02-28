@@ -2,13 +2,18 @@
 
 #include <stdint.h>
 
+#include <QList>
+#include <QPair>
+
 class QString;
 class QTime;
 
 class UsageData
 {
 public:
-    explicit UsageData(const QString& path);
+    explicit UsageData(const QString& path,
+                       const QList<QPair<QTime, QTime>>& peakTimes,
+                       const QList<QPair<QTime, QTime>>& shoulderTimes);
 
     class Stats
     {
@@ -41,6 +46,9 @@ private:
     Stats mTotals;
     Stats mPerDay[366];
     Stats mPerMonth[12];
+
+    QList<QPair<QTime, QTime>> mPeakTimes;
+    QList<QPair<QTime, QTime>> mShoulderTimes;
 
 };
 

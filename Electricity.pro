@@ -9,12 +9,22 @@ CONFIG += c++17
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
+    firstrestfeedincalculator.cpp \
+    flatratefeedincalculator.cpp \
+    flatrateusagecalculator.cpp \
+    itypecalculator.cpp \
     main.cpp \
     mainwindow.cpp \
+    timeofusecalculator.cpp \
     usagedata.cpp
 
 HEADERS += \
+    firstrestfeedincalculator.h \
+    flatratefeedincalculator.h \
+    flatrateusagecalculator.h \
+    itypecalculator.h \
     mainwindow.h \
+    timeofusecalculator.h \
     usagedata.h
 
 FORMS += \

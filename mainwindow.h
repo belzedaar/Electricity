@@ -4,11 +4,12 @@
 
 #include <QScopedPointer>
 #include <QChart>
+#include <QStandardItemModel>
 
 namespace Ui { class MainWindow; }
 
 class UsageData;
-
+class ITypeCalculator;
 
 class MainWindow : public QMainWindow
 {
@@ -19,14 +20,28 @@ public:
     ~MainWindow();
 private slots:
     void OpenFile();
+    void Reload();
+    void Calculate();
 
 private:
     void LoadData(const QString& path);
+
+    void SetupDataModel(QStandardItemModel& model, QList<QPair<QString, QString>>& times);
+    void GetModelData(const QStandardItemModel& model, QList<QPair<QTime, QTime>>& outTimes) const;
+    void SetupCalculators(QTabWidget* tabWidget, QList<ITypeCalculator*>& calculators);
 
     Ui::MainWindow *mUI;
 
     QScopedPointer<UsageData> mUsageData;
 
     QChart mChart;
+
+    QStandardItemModel mPeakTimes;
+    QStandardItemModel mShoulderTimes;
+
+    QString mFileName;
+
+    QList<ITypeCalculator*> mCostCalculators;
+    QList<ITypeCalculator*> mFeedInCalculators;
 };
 
