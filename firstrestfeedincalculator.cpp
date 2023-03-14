@@ -17,7 +17,7 @@ double FirstRestFeedInCalculator::GetTotal(const UsageData& data) const
     {
         double feedInPerQuater[4] = { 0 };
 
-        for (uint32_t m = 0; m < 11; ++m)
+        for (uint32_t m = 0; m < 12; ++m)
         {
             const UsageData::Stats& monthStats = data.GetMonth(m);
             const uint32_t quaterIndex = m / 3; // 3 months per quater
@@ -26,20 +26,20 @@ double FirstRestFeedInCalculator::GetTotal(const UsageData& data) const
 
         for (double feedOneQuater : feedInPerQuater)
         {
-            double averagePerDay = feedOneQuater / 91.25;
-
-            double creditPerDay = 0.0f;
-            if (averagePerDay> mFirstKWH)
+            //double averagePerDay = feedOneQuater / 91.25;
+            double totalFirst = mFirstKWH * 91.2;
+            double total = 0.0f;
+            if (feedOneQuater > totalFirst)
             {
-                creditPerDay += mFirstKWH * mFirstRateDollars;
-                creditPerDay += (averagePerDay - mFirstKWH) * mRestRateDollars;
+                total += mFirstRateDollars * totalFirst;
+                total += (feedOneQuater - totalFirst) * mRestRateDollars;
             }
             else
             {
-                creditPerDay += averagePerDay * mFirstRateDollars;
+                total += feedOneQuater * mFirstRateDollars;
             }
 
-            feedInCredit += creditPerDay * 91.25;
+            feedInCredit += total;
         }
     }
     else
